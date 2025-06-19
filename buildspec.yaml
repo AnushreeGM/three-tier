@@ -2,34 +2,47 @@ version: 0.2
 
 env:
   variables:
-    IMAGE_TAG: "latest"
+    AWS_REGION: us-east-1
+    BACKEND_ECR_URI: 545009829015.dkr.ecr.us-east-1.amazonaws.com/backend
+    FRONTEND_ECR_URI: 545009829015.dkr.ecr.us-east-1.amazonaws.com/frontend
+    CLUSTER_NAME: three-tier-cluster
+    NAMESPACE: my-app
 
 phases:
   pre_build:
     commands:
       - echo Logging in to Amazon ECR...
-      - $(aws ecr get-login --no-include-email --region us-east-1)
+      - aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin 545009829015.dkr.ecr.us-east-1.amazonaws.com
       - IMAGE_TAG=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | cut -c 1-7)
+      - echo IMAGE_TAG=$IMAGE_TAG
+
   build:
     commands:
       - echo Building backend image...
-      - docker build -t 381492221394.dkr.ecr.us-east-1.amazonaws.com/three-tier-backend:$IMAGE_TAG ./backend
-      - docker push 381492221394.dkr.ecr.us-east-1.amazonaws.com/three-tier-backend:$IMAGE_TAG
+      - docker build -t $BACKEND_ECR_URI:$IMAGE_TAG ./backend
+      - docker push $BACKEND_ECR_URI:$IMAGE_TAG
 
       - echo Building frontend image...
-      - docker build -t 381492221394.dkr.ecr.us-east-1.amazonaws.com/three-tier-frontend:$IMAGE_TAG ./frontend
-      - docker push 381492221394.dkr.ecr.us-east-1.amazonaws.com/three-tier-frontend:$IMAGE_TAG
+      - docker build -t $FRONTEND_ECR_URI:$IMAGE_TAG ./frontend
+      - docker push $FRONTEND_ECR_URI:$IMAGE_TAG
+
   post_build:
     commands:
       - echo Updating kubeconfig...
-      - aws eks update-kubeconfig --region us-east-1 --name three-tier-cluster
+      - aws eks update-kubeconfig --region $AWS_REGION --name $CLUSTER_NAME
 
-      - echo Replacing image tags in deployment files...
-      - sed -i "s|381492221394.dkr.ecr.us-east-1.amazonaws.com/three-tier-backend:.*|381492221394.dkr.ecr.us-east-1.amazonaws.com/three-tier-backend:$IMAGE_TAG|" k8s/backend-deployment.yaml
-      - sed -i "s|381492221394.dkr.ecr.us-east-1.amazonaws.com/three-tier-frontend:.*|381492221394.dkr.ecr.us-east-1.amazonaws.com/three-tier-frontend:$IMAGE_TAG|" k8s/frontend-deployment.yaml
+      - echo Updating Kubernetes manifests with image tags...
+      - sed -i "s|$BACKEND_ECR_URI:.*|$BACKEND_ECR_URI:$IMAGE_TAG|" k8s/backend-deployment.yaml
+      - sed -i "s|$FRONTEND_ECR_URI:.*|$FRONTEND_ECR_URI:$IMAGE_TAG|" k8s/frontend-deployment.yaml
 
       - echo Applying Kubernetes manifests...
-      - kubectl apply -f k8s/
+      - kubectl apply -f k8s/namespace.yaml
+      - kubectl apply -f k8s/configmap.yaml -n $NAMESPACE
+      - kubectl apply -f k8s/backend-deployment.yaml -n $NAMESPACE
+      - kubectl apply -f k8s/backend-service.yaml -n $NAMESPACE
+      - kubectl apply -f k8s/frontend-deployment.yaml -n $NAMESPACE
+      - kubectl apply -f k8s/frontend-service.yaml -n $NAMESPACE
+
 artifacts:
   files:
     - k8s/*.yaml
