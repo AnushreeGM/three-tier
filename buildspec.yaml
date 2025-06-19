@@ -57,7 +57,7 @@ phases:
       - sed -i "s|$BACKEND_ECR_URI:.*|$BACKEND_ECR_URI:$IMAGE_TAG|" k8s/backend-deployment.yaml
       - sed -i "s|$FRONTEND_ECR_URI:.*|$FRONTEND_ECR_URI:$IMAGE_TAG|" k8s/frontend-deployment.yaml
 
-      - cp $K8S_MANIFEST_DIR/*.yaml k8s-out/Database/
+      - cp $K8S_MANIFEST_DIR/*.yaml k8s-out/
 
 artifacts:
   files:
