@@ -29,7 +29,7 @@ phases:
   post_build:
     commands:
       - echo Updating kubeconfig...
-      - aws eks update-kubeconfig --region $AWS_REGION --name $CLUSTER_NAME --role-arn arn:aws:iam::545009829015:role/service-role/codebuild-three-tier-service-role
+      - aws eks update-kubeconfig --region $AWS_REGION --name $CLUSTER_NAME
 
       - echo Checking AWS IAM identity and Kubernetes access...
       - aws sts get-caller-identity
@@ -39,13 +39,6 @@ phases:
       - sed -i "s|$BACKEND_ECR_URI:.*|$BACKEND_ECR_URI:$IMAGE_TAG|" k8s/backend-deployment.yaml
       - sed -i "s|$FRONTEND_ECR_URI:.*|$FRONTEND_ECR_URI:$IMAGE_TAG|" k8s/frontend-deployment.yaml
 
-      - echo Applying Kubernetes manifests...
-      - kubectl apply -f k8s/namespace.yaml --validate=false
-      - kubectl apply -f k8s/configmap.yaml -n $NAMESPACE --validate=false
-      - kubectl apply -f k8s/backend-deployment.yaml -n $NAMESPACE --validate=false
-      - kubectl apply -f k8s/backend-service.yaml -n $NAMESPACE --validate=false
-      - kubectl apply -f k8s/frontend-deployment.yaml -n $NAMESPACE --validate=false
-      - kubectl apply -f k8s/frontend-service.yaml -n $NAMESPACE --validate=false
 
 artifacts:
   files:
