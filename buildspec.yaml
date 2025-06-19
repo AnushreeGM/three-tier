@@ -12,7 +12,7 @@ phases:
   pre_build:
     commands:
       - echo Logging in to Amazon ECR...
-      - aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin 545009829015.dkr.ecr.us-east-1.amazonaws.com
+      - aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $BACKEND_ECR_URI
       - IMAGE_TAG=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | cut -c 1-7)
       - echo IMAGE_TAG=$IMAGE_TAG
 
@@ -39,6 +39,8 @@ phases:
       - sed -i "s|$BACKEND_ECR_URI:.*|$BACKEND_ECR_URI:$IMAGE_TAG|" k8s/backend-deployment.yaml
       - sed -i "s|$FRONTEND_ECR_URI:.*|$FRONTEND_ECR_URI:$IMAGE_TAG|" k8s/frontend-deployment.yaml
 
+      - echo Deploying to EKS...
+      - kubectl apply -f k8s/
 
 artifacts:
   files:
