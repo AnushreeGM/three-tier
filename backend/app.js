@@ -15,4 +15,6 @@ app.post('/api/items', async (req, res) => {
   res.sendStatus(200);
 });
 
+app.get('/healthz', (_, res) => res.send('ok'));
+
 app.listen(5000, () => console.log('Backend listening on 5000'));
